@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import backtype.storm.generated.GlobalStreamId;
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.tuple.Fields;
-import backtype.storm.tuple.Tuple;
-import backtype.storm.topology.base.BaseRichBolt;
+import org.apache.storm.generated.GlobalStreamId;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.topology.base.BaseRichBolt;
 
 import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPAdministrator;
@@ -25,115 +25,100 @@ import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.UpdateListener;
 
-public class EsperBolt extends BaseRichBolt implements UpdateListener
-{
+public class EsperBolt extends BaseRichBolt implements UpdateListener {
+
     private static final long serialVersionUID = 1L;
 
-    public static class Builder
-    {
+    public static class Builder {
+
         protected final EsperBolt bolt;
 
-        public Builder()
-        {
+        public Builder() {
             this(new EsperBolt());
         }
 
-        protected Builder(EsperBolt bolt)
-        {
+        protected Builder(EsperBolt bolt) {
             this.bolt = bolt;
         }
 
-        public InputsBuilder inputs()
-        {
+        public InputsBuilder inputs() {
             return new InputsBuilder(bolt);
         }
 
-        public OutputsBuilder outputs()
-        {
+        public OutputsBuilder outputs() {
             return new OutputsBuilder(bolt);
         }
 
-        public StatementsBuilder statements()
-        {
+        public StatementsBuilder statements() {
             return new StatementsBuilder(bolt);
         }
 
-        public EsperBolt build()
-        {
+        public EsperBolt build() {
             return bolt;
         }
     }
 
-    public static class InputsBuilder extends Builder
-    {
-        private InputsBuilder(EsperBolt bolt)
-        {
+    public static class InputsBuilder extends Builder {
+
+        private InputsBuilder(EsperBolt bolt) {
             super(bolt);
         }
 
-        public AliasedInputBuilder aliasComponent(String componentId)
-        {
+        public AliasedInputBuilder aliasComponent(String componentId) {
             return new AliasedInputBuilder(bolt, new StreamId(componentId));
         }
 
-        public AliasedInputBuilder aliasStream(String componentId, String streamId)
-        {
+        public AliasedInputBuilder aliasStream(String componentId, String streamId) {
             return new AliasedInputBuilder(bolt, new StreamId(componentId, streamId));
         }
     }
 
-    public static final class AliasedInputBuilder
-    {
+    public static final class AliasedInputBuilder {
+
         private final EsperBolt bolt;
         private final StreamId streamId;
         private final Map<String, String> fieldTypes;
 
-        private AliasedInputBuilder(EsperBolt bolt, StreamId streamId)
-        {
+        private AliasedInputBuilder(EsperBolt bolt, StreamId streamId) {
             this(bolt, streamId, new HashMap<String, String>());
         }
 
-        private AliasedInputBuilder(EsperBolt bolt, StreamId streamId, Map<String, String> fieldTypes)
-        {
+        private AliasedInputBuilder(EsperBolt bolt, StreamId streamId, Map<String, String> fieldTypes) {
             this.bolt = bolt;
             this.streamId = streamId;
             this.fieldTypes = fieldTypes;
         }
 
-        public TypedInputBuilder withField(String fieldNames)
-        {
+        public TypedInputBuilder withField(String fieldNames) {
             return new TypedInputBuilder(bolt, streamId, fieldTypes, fieldNames);
         }
 
-        public TypedInputBuilder withFields(String... fieldNames)
-        {
+        public TypedInputBuilder withFields(String... fieldNames) {
             return new TypedInputBuilder(bolt, streamId, fieldTypes, fieldNames);
         }
 
-        public InputsBuilder toEventType(String name)
-        {
+        public InputsBuilder toEventType(String name) {
             bolt.addInputAlias(streamId, name, new TupleTypeDescriptor(fieldTypes));
             return new InputsBuilder(bolt);
         }
     }
 
-    public static final class TypedInputBuilder
-    {
+    public static final class TypedInputBuilder {
+
         private final EsperBolt bolt;
         private final StreamId streamId;
         private final Map<String, String> fieldTypes;
         private final String[] fieldNames;
 
-        private TypedInputBuilder(EsperBolt bolt, StreamId streamId, Map<String, String> fieldTypes, String... fieldNames)
-        {
+        private TypedInputBuilder(EsperBolt bolt, StreamId streamId, Map<String, String> fieldTypes,
+                                  String... fieldNames) {
             this.bolt = bolt;
             this.streamId = streamId;
             this.fieldTypes = fieldTypes;
             this.fieldNames = fieldNames;
         }
 
-        public AliasedInputBuilder ofType(Class<?> type)
-        {
+        public AliasedInputBuilder ofType(Class<?> type) {
             for (String fieldName : fieldNames) {
                 fieldTypes.put(fieldName, type.getName());
             }
@@ -141,130 +126,112 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         }
     }
 
-    public static final class OutputsBuilder extends Builder
-    {
-        private OutputsBuilder(EsperBolt bolt)
-        {
+    public static final class OutputsBuilder extends Builder {
+
+        private OutputsBuilder(EsperBolt bolt) {
             super(bolt);
         }
 
-        public OutputStreamBuilder onStream(String streamName)
-        {
+        public OutputStreamBuilder onStream(String streamName) {
             return new OutputStreamBuilder(bolt, streamName);
         }
 
-        public OutputStreamBuilder onDefaultStream()
-        {
+        public OutputStreamBuilder onDefaultStream() {
             return new OutputStreamBuilder(bolt, "default");
         }
     }
 
-    public static final class OutputStreamBuilder
-    {
+    public static final class OutputStreamBuilder {
+
         private final EsperBolt bolt;
         private final String streamName;
 
-        private OutputStreamBuilder(EsperBolt bolt, String streamName)
-        {
+        private OutputStreamBuilder(EsperBolt bolt, String streamName) {
             this.bolt = bolt;
             this.streamName = streamName;
         }
 
-        public NamedOutputStreamBuilder fromEventType(String name)
-        {
+        public NamedOutputStreamBuilder fromEventType(String name) {
             return new NamedOutputStreamBuilder(bolt, streamName, name);
         }
 
-        public OutputsBuilder emit(String... fields)
-        {
+        public OutputsBuilder emit(String... fields) {
             bolt.setAnonymousOutput(streamName, fields);
             return new OutputsBuilder(bolt);
         }
     }
 
-    public static final class NamedOutputStreamBuilder
-    {
+    public static final class NamedOutputStreamBuilder {
+
         private final EsperBolt bolt;
         private final String streamName;
         private final String eventTypeName;
 
-        private NamedOutputStreamBuilder(EsperBolt bolt, String streamName, String eventTypeName)
-        {
+        private NamedOutputStreamBuilder(EsperBolt bolt, String streamName, String eventTypeName) {
             this.bolt = bolt;
             this.streamName = streamName;
             this.eventTypeName = eventTypeName;
         }
 
-        public OutputsBuilder emit(String... fields)
-        {
+        public OutputsBuilder emit(String... fields) {
             bolt.addNamedOutput(streamName, eventTypeName, fields);
             return new OutputsBuilder(bolt);
         }
     }
 
-    public static final class StatementsBuilder extends Builder
-    {
-        private StatementsBuilder(EsperBolt bolt)
-        {
+    public static final class StatementsBuilder extends Builder {
+
+        private StatementsBuilder(EsperBolt bolt) {
             super(bolt);
         }
 
-        public StatementsBuilder add(String statement)
-        {
+        public StatementsBuilder add(String statement) {
             bolt.addStatement(statement);
             return this;
         }
     }
 
-    private final Map<StreamId, String> inputAliases = new LinkedHashMap<StreamId, String>();
-    private final Map<StreamId, TupleTypeDescriptor> tupleTypes = new LinkedHashMap<StreamId, TupleTypeDescriptor>();
-    private final Map<String, EventTypeDescriptor> eventTypes = new LinkedHashMap<String, EventTypeDescriptor>();
-    private final List<String> statements = new ArrayList<String>();
+    private final Map<StreamId, String> inputAliases = new LinkedHashMap<>();
+    private final Map<StreamId, TupleTypeDescriptor> tupleTypes = new LinkedHashMap<>();
+    private final Map<String, EventTypeDescriptor> eventTypes = new LinkedHashMap<>();
+    private final List<String> statements = new ArrayList<>();
     private transient EPServiceProvider esperSink;
     private transient EPRuntime runtime;
     private transient EPAdministrator admin;
     private transient OutputCollector collector;
 
-    private EsperBolt()
-    {
+    private EsperBolt() {
     }
 
-    private void addInputAlias(StreamId streamId, String name, TupleTypeDescriptor typeDesc)
-    {
+    private void addInputAlias(StreamId streamId, String name, TupleTypeDescriptor typeDesc) {
         inputAliases.put(streamId, name);
         if (typeDesc != null) {
             tupleTypes.put(streamId, typeDesc);
         }
     }
 
-    private void addNamedOutput(String streamId, String eventTypeName, String... fields)
-    {
+    private void addNamedOutput(String streamId, String eventTypeName, String... fields) {
         eventTypes.put(eventTypeName, new EventTypeDescriptor(eventTypeName, fields, streamId));
     }
 
-    private void setAnonymousOutput(String streamId, String... fields)
-    {
+    private void setAnonymousOutput(String streamId, String... fields) {
         eventTypes.put(null, new EventTypeDescriptor(null, fields, streamId));
     }
 
-    private void addStatement(String stmt)
-    {
+    private void addStatement(String stmt) {
         statements.add(stmt);
     }
 
-    public EventTypeDescriptor getEventType(String name)
-    {
+    public EventTypeDescriptor getEventType(String name) {
         return eventTypes.get(name);
     }
 
-    public Collection<EventTypeDescriptor> getEventTypes()
-    {
-        return new ArrayList<EventTypeDescriptor>(eventTypes.values());
+    public Collection<EventTypeDescriptor> getEventTypes() {
+        return new ArrayList<>(eventTypes.values());
     }
 
-    public EventTypeDescriptor getEventTypeForStreamId(String streamId)
-    {
-        for (EventTypeDescriptor eventType: eventTypes.values()) {
+    public EventTypeDescriptor getEventTypeForStreamId(String streamId) {
+        for (EventTypeDescriptor eventType : eventTypes.values()) {
             if (streamId.equals(eventType.getStreamId())) {
                 return eventType;
             }
@@ -273,9 +240,8 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
     }
 
     @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer)
-    {
-        for (EventTypeDescriptor eventType: eventTypes.values()) {
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        for (EventTypeDescriptor eventType : eventTypes.values()) {
             declarer.declareStream(eventType.getStreamId(), eventType.getFields());
         }
     }
@@ -283,8 +249,7 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
     @Override
     public void prepare(@SuppressWarnings("rawtypes") Map conf,
                         TopologyContext context,
-                        OutputCollector collector)
-    {
+                        OutputCollector collector) {
         this.collector = collector;
 
         Configuration configuration = new Configuration();
@@ -303,8 +268,7 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         }
     }
 
-    private String getEventTypeName(String componentId, String streamId)
-    {
+    private String getEventTypeName(String componentId, String streamId) {
         String alias = inputAliases.get(new StreamId(componentId, streamId));
 
         if (alias == null) {
@@ -313,8 +277,7 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         return alias;
     }
 
-    private void setupEventTypes(TopologyContext context, Configuration configuration)
-    {
+    private void setupEventTypes(TopologyContext context, Configuration configuration) {
         Set<GlobalStreamId> sourceIds = context.getThisSources().keySet();
 
         for (GlobalStreamId id : sourceIds) {
@@ -327,9 +290,8 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         }
     }
 
-    private Map<String, Object> setupEventTypeProperties(Fields fields, TupleTypeDescriptor typeDesc)
-    {
-        Map<String, Object> properties = new HashMap<String, Object>();
+    private Map<String, Object> setupEventTypeProperties(Fields fields, TupleTypeDescriptor typeDesc) {
+        Map<String, Object> properties = new HashMap<>();
         int numFields = fields.size();
 
         for (int idx = 0; idx < numFields; idx++) {
@@ -355,12 +317,11 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         }
         return properties;
     }
-    
+
     @Override
-    public void execute(Tuple tuple)
-    {
+    public void execute(Tuple tuple) {
         String eventType = getEventTypeName(tuple.getSourceComponent(), tuple.getSourceStreamId());
-        Map<String, Object> data = new HashMap<String, Object>();
+        Map<String, Object> data = new HashMap<>();
         Fields fields = tuple.getFields();
         int numFields = fields.size();
 
@@ -376,8 +337,7 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
     }
 
     @Override
-    public void update(EventBean[] newEvents, EventBean[] oldEvents)
-    {
+    public void update(EventBean[] newEvents, EventBean[] oldEvents) {
         if (newEvents != null) {
             for (EventBean newEvent : newEvents) {
                 EventTypeDescriptor eventType = getEventType(newEvent.getEventType().getName());
@@ -393,20 +353,18 @@ public class EsperBolt extends BaseRichBolt implements UpdateListener
         }
     }
 
-    private List<Object> toTuple(EventBean event, Fields fields)
-    {
+    private List<Object> toTuple(EventBean event, Fields fields) {
         int numFields = fields.size();
-        List<Object> tuple = new ArrayList<Object>(numFields);
+        List<Object> tuple = new ArrayList<>(numFields);
 
         for (int idx = 0; idx < numFields; idx++) {
             tuple.add(event.get(fields.get(idx)));
         }
         return tuple;
     }
-    
+
     @Override
-    public void cleanup()
-    {
+    public void cleanup() {
         if (esperSink != null) {
             esperSink.destroy();
         }

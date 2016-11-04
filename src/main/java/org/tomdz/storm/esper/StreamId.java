@@ -2,35 +2,30 @@ package org.tomdz.storm.esper;
 
 import java.io.Serializable;
 
-public class StreamId implements Serializable
-{
+public class StreamId implements Serializable {
+
     private final String componentId;
     private final String streamId;
 
-    StreamId(String componentId)
-    {
+    StreamId(String componentId) {
         this(componentId, "default");
     }
 
-    StreamId(String componentId, String streamId)
-    {
+    StreamId(String componentId, String streamId) {
         this.componentId = componentId;
         this.streamId = streamId;
     }
 
-    public String getComponentId()
-    {
+    public String getComponentId() {
         return componentId;
     }
 
-    public String getStreamId()
-    {
+    public String getStreamId() {
         return streamId;
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -51,10 +46,9 @@ public class StreamId implements Serializable
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         int result = componentId != null ? componentId.hashCode() : 0;
-        result = 31 * result + (streamId != null ? streamId.hashCode() : 0);
+        result = 31 * result + ( streamId != null ? streamId.hashCode() : 0 );
         return result;
     }
 }
